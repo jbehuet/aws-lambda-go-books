@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 )
 
-var ErrorFailedToFetchRecord = "failed to fetch record"
+var ErrorFailedToFetchRecords = "failed to fetch records"
 
 type Book struct {
 	Title  string `json:"title"`
@@ -21,9 +21,10 @@ func FetchBooks(tableName string, dynaClient dynamodbiface.DynamoDBAPI) (*[]Book
 	input := &dynamodb.ScanInput{
 		TableName: aws.String(tableName),
 	}
+
 	result, err := dynaClient.Scan(input)
 	if err != nil {
-		return nil, errors.New(ErrorFailedToFetchRecord)
+		return nil, errors.New(ErrorFailedToFetchRecords)
 	}
 	items := new([]Book)
 	_ = dynamodbattribute.UnmarshalListOfMaps(result.Items, items)

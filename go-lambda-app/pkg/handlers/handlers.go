@@ -19,7 +19,7 @@ func GetBooks(req events.APIGatewayProxyRequest, tableName string, dynaClient dy
 	*events.APIGatewayProxyResponse,
 	error,
 ) {
-	// Get list of users
+	// Get list of books
 	result, err := book.FetchBooks(tableName, dynaClient)
 	if err != nil {
 		return apiResponse(http.StatusBadRequest, ErrorBody{
