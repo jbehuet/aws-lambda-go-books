@@ -15,7 +15,7 @@ type ErrorBody struct {
 	ErrorMsg *string `json:"error,omitempty"`
 }
 
-func GetBooks(req events.APIGatewayProxyRequest, tableName string, dynaClient dynamodbiface.DynamoDBAPI) (
+func GetBooks(tableName string, dynaClient dynamodbiface.DynamoDBAPI) (
 	*events.APIGatewayProxyResponse,
 	error,
 ) {
@@ -27,6 +27,20 @@ func GetBooks(req events.APIGatewayProxyRequest, tableName string, dynaClient dy
 		})
 	}
 	return apiResponse(http.StatusOK, result)
+}
+
+func CreateBook(req events.APIGatewayProxyRequest, tableName string, dynaClient dynamodbiface.DynamoDBAPI) (
+	*events.APIGatewayProxyResponse,
+	error,
+) {
+	// Create a new book
+	result, err := book.CreateBook(req, tableName, dynaClient)
+	if err != nil {
+		return apiResponse(http.StatusBadRequest, ErrorBody{
+			aws.String(err.Error()),
+		})
+	}
+	return apiResponse(http.StatusCreated, result)
 }
 
 func UnhandledMethod() (*events.APIGatewayProxyResponse, error) {

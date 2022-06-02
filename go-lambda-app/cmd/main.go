@@ -12,9 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 )
 
-var (
-	dynaClient dynamodbiface.DynamoDBAPI
-)
+var dynaClient dynamodbiface.DynamoDBAPI
 
 func main() {
 	region := os.Getenv("AWS_REGION")
@@ -33,9 +31,9 @@ const tableName = "Books"
 func handler(req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 	switch req.HTTPMethod {
 	case "GET":
-		return handlers.GetBooks(req, tableName, dynaClient)
+		return handlers.GetBooks(tableName, dynaClient)
 	case "POST":
-		return handlers.UnhandledMethod()
+		return handlers.CreateBook(req, tableName, dynaClient)
 	case "PUT":
 		return handlers.UnhandledMethod()
 	case "DELETE":
