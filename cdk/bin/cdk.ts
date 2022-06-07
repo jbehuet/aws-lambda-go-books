@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import "source-map-support/register";
-import * as cdk from "@aws-cdk/core";
-import { GoLambdaStack } from "../lib/go-lambda-stack";
+import { GoLambdaBooksStack } from "../lib/go-lambda-books-stack";
+import { App } from "aws-cdk-lib";
 
-const app = new cdk.App();
-new GoLambdaStack(app, "GoLambdaStack", {
+const app = new App();
+new GoLambdaBooksStack(app, "go-lambda-books-stack", {
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: process.env.CDK_DEFAULT_REGION,
