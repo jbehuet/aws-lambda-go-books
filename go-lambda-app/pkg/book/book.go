@@ -3,13 +3,13 @@ package book
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
+	"github.com/google/uuid"
 )
 
 var (
@@ -17,10 +17,12 @@ var (
 	ErrorInvalidBookData       = "invalid book data"
 	ErrorCouldNotMarshalItem   = "could not marshal item"
 	ErrorCouldNotDynamoPutItem = "could not dynamo put item error"
+	ErrorCouldNotDeleteItem    = "could not delete item"
 )
 
 type Book struct {
-	Title  string `json:"Title"` // field name in dynamodb !case sensitive
+	UUID   string `json:"uuid"` // field name in dynamodb !case sensitive
+	Title  string `json:"Title"`
 	Author string `json:"Author"`
 	Editor string `json:"Editor"`
 }
@@ -43,6 +45,8 @@ func CreateBook(req events.APIGatewayProxyRequest, tableName string, dynaClient 
 
 	// Create a book from request body
 	var b Book
+	b.UUID = uuid.NewString()
+
 	if err := json.Unmarshal([]byte(req.Body), &b); err != nil {
 		return nil, errors.New(ErrorInvalidBookData)
 	}
@@ -59,11 +63,27 @@ func CreateBook(req events.APIGatewayProxyRequest, tableName string, dynaClient 
 		TableName: aws.String(tableName),
 	}
 
-	fmt.Println(input)
-
 	_, err = dynaClient.PutItem(input)
 	if err != nil {
 		return nil, errors.New(err.Error())
 	}
 	return &b, nil
+}
+
+func DeleteBook(req events.APIGatewayProxyRequest, tableName string, dynaClient dynamodbiface.DynamoDBAPI) error {
+	uuid := req.QueryStringParameters["uuid"]
+	input := &dynamodb.DeleteItemInput{
+		TableName: aws.String(tableName),
+		Key: map[string]*dynamodb.AttributeValue{
+			"uuid": {
+				S: aws.String(uuid),
+			},
+		},
+	}
+
+	_, err := dynaClient.DeleteItem(input)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+	return nil
 }

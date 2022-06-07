@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"jbehuet/go-lambda-app-sample/pkg/book"
+	"jbehuet/aws-lambda-go-books/pkg/book"
 	"net/http"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -33,7 +33,7 @@ func CreateBook(req events.APIGatewayProxyRequest, tableName string, dynaClient 
 	*events.APIGatewayProxyResponse,
 	error,
 ) {
-	// Create a new book
+	// Create or update a book
 	result, err := book.CreateBook(req, tableName, dynaClient)
 	if err != nil {
 		return apiResponse(http.StatusBadRequest, ErrorBody{
@@ -41,6 +41,20 @@ func CreateBook(req events.APIGatewayProxyRequest, tableName string, dynaClient 
 		})
 	}
 	return apiResponse(http.StatusCreated, result)
+}
+
+func DeleteBook(req events.APIGatewayProxyRequest, tableName string, dynaClient dynamodbiface.DynamoDBAPI) (
+	*events.APIGatewayProxyResponse,
+	error,
+) {
+	// Delete a book
+	err := book.DeleteBook(req, tableName, dynaClient)
+	if err != nil {
+		return apiResponse(http.StatusBadRequest, ErrorBody{
+			aws.String(err.Error()),
+		})
+	}
+	return apiResponse(http.StatusOK, nil)
 }
 
 func UnhandledMethod() (*events.APIGatewayProxyResponse, error) {

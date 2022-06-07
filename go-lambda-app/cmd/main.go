@@ -1,7 +1,7 @@
 package main
 
 import (
-	"jbehuet/go-lambda-app-sample/pkg/handlers"
+	"jbehuet/aws-lambda-go-books/pkg/handlers"
 	"os"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -26,7 +26,7 @@ func main() {
 	lambda.Start(handler)
 }
 
-const tableName = "Books"
+const tableName = "books"
 
 func handler(req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 	switch req.HTTPMethod {
@@ -37,7 +37,7 @@ func handler(req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse
 	case "PUT":
 		return handlers.UnhandledMethod()
 	case "DELETE":
-		return handlers.UnhandledMethod()
+		return handlers.DeleteBook(req, tableName, dynaClient)
 	default:
 		return handlers.UnhandledMethod()
 	}
