@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"jbehuet/aws-lambda-go-books/pkg/book"
 	"net/http"
 
@@ -15,10 +16,24 @@ type ErrorBody struct {
 	ErrorMsg *string `json:"error,omitempty"`
 }
 
-func GetBooks(tableName string, dynaClient dynamodbiface.DynamoDBAPI) (
+func GetBookOrBooks(req events.APIGatewayProxyRequest, tableName string, dynaClient dynamodbiface.DynamoDBAPI) (
 	*events.APIGatewayProxyResponse,
 	error,
 ) {
+	uuid := req.QueryStringParameters["uuid"]
+	fmt.Println(uuid)
+	if uuid != "" {
+		// Get a book
+		result, err := book.FetchBook(uuid, tableName, dynaClient)
+		if err != nil {
+			return apiResponse(http.StatusNotFound, ErrorBody{
+				aws.String(err.Error()),
+			})
+		}
+
+		return apiResponse(http.StatusOK, result)
+	}
+
 	// Get list of books
 	result, err := book.FetchBooks(tableName, dynaClient)
 	if err != nil {
@@ -33,8 +48,22 @@ func CreateBook(req events.APIGatewayProxyRequest, tableName string, dynaClient 
 	*events.APIGatewayProxyResponse,
 	error,
 ) {
-	// Create or update a book
+	// Create a book
 	result, err := book.CreateBook(req, tableName, dynaClient)
+	if err != nil {
+		return apiResponse(http.StatusBadRequest, ErrorBody{
+			aws.String(err.Error()),
+		})
+	}
+	return apiResponse(http.StatusCreated, result)
+}
+
+func UpdateBook(req events.APIGatewayProxyRequest, tableName string, dynaClient dynamodbiface.DynamoDBAPI) (
+	*events.APIGatewayProxyResponse,
+	error,
+) {
+	// Update a book
+	result, err := book.UpdateBook(req, tableName, dynaClient)
 	if err != nil {
 		return apiResponse(http.StatusBadRequest, ErrorBody{
 			aws.String(err.Error()),

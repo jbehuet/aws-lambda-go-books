@@ -31,11 +31,11 @@ const tableName = "books"
 func handler(req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 	switch req.HTTPMethod {
 	case "GET":
-		return handlers.GetBooks(tableName, dynaClient)
+		return handlers.GetBookOrBooks(req, tableName, dynaClient)
 	case "POST":
 		return handlers.CreateBook(req, tableName, dynaClient)
 	case "PUT":
-		return handlers.UnhandledMethod()
+		return handlers.UpdateBook(req, tableName, dynaClient)
 	case "DELETE":
 		return handlers.DeleteBook(req, tableName, dynaClient)
 	default:
