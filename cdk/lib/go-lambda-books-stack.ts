@@ -15,7 +15,13 @@ export class GoLambdaBooksStack extends Stack {
 
     booksLambdaFn.addToRolePolicy(
       new aws_iam.PolicyStatement({
-        actions: ["dynamodb:Scan", "dynamodb:PutItem", "dynamodb:DeleteItem"],
+        actions: [
+          "dynamodb:Scan",
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+        ],
         resources: ["arn:aws:dynamodb:eu-west-3:463496343972:table/books"],
       })
     );
@@ -54,6 +60,11 @@ export class GoLambdaBooksStack extends Stack {
 
     booksApi.addMethod(
       "POST",
+      new LambdaIntegration(booksLambdaFn, { proxy: true })
+    );
+
+    booksApi.addMethod(
+      "PUT",
       new LambdaIntegration(booksLambdaFn, { proxy: true })
     );
 
