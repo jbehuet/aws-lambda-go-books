@@ -10,7 +10,7 @@ export class GoLambdaBooksStack extends Stack {
     super(scope, id, props);
 
     const booksLambdaFn = new lambda.GoFunction(this, "go-lambda-books-fn", {
-      entry: path.join(__dirname, "../../go-lambda-app/cmd"),
+      entry: path.join(__dirname, "../../go-lambda-app/cmd/books"),
     });
 
     booksLambdaFn.addToRolePolicy(
@@ -23,6 +23,47 @@ export class GoLambdaBooksStack extends Stack {
           "dynamodb:DeleteItem",
         ],
         resources: ["arn:aws:dynamodb:eu-west-3:463496343972:table/books"],
+      })
+    );
+
+    const bookCoversLambdaFn = new lambda.GoFunction(
+      this,
+      "go-lambda-book-covers-fn",
+      {
+        entry: path.join(__dirname, "../../go-lambda-app/cmd/covers"),
+      }
+    );
+
+    bookCoversLambdaFn.addToRolePolicy(
+      new aws_iam.PolicyStatement({
+        effect: aws_iam.Effect.ALLOW,
+        actions: ["s3:ListAllMyBuckets"],
+        resources: ["*"],
+      })
+    );
+
+    bookCoversLambdaFn.addToRolePolicy(
+      new aws_iam.PolicyStatement({
+        effect: aws_iam.Effect.ALLOW,
+        actions: ["s3:ListBucket", "s3:GetBucketLocation"],
+        resources: ["arn:aws:s3:::jbehuet-book-covers"],
+      })
+    );
+
+    bookCoversLambdaFn.addToRolePolicy(
+      new aws_iam.PolicyStatement({
+        effect: aws_iam.Effect.ALLOW,
+        actions: [
+          "s3:PutObject",
+          "s3:PutObjectAcl",
+          "s3:GetObject",
+          "s3:GetObjectAcl",
+          "s3:DeleteObject",
+        ],
+        resources: [
+          "arn:aws:s3:::jbehuet-book-covers",
+          "arn:aws:s3:::jbehuet-book-covers/*",
+        ],
       })
     );
 
@@ -50,27 +91,34 @@ export class GoLambdaBooksStack extends Stack {
     new CfnOutput(this, "apiUrl", { value: api.url });
 
     // add a /books resource
-    const booksApi = api.root.addResource("books");
+    const booksRessource = api.root.addResource("books");
 
     // integrate GET /books with lambdaFn
-    booksApi.addMethod(
+    booksRessource.addMethod(
       "GET",
       new LambdaIntegration(booksLambdaFn, { proxy: true })
     );
 
-    booksApi.addMethod(
+    booksRessource.addMethod(
       "POST",
       new LambdaIntegration(booksLambdaFn, { proxy: true })
     );
 
-    booksApi.addMethod(
+    booksRessource.addMethod(
       "PUT",
       new LambdaIntegration(booksLambdaFn, { proxy: true })
     );
 
-    booksApi.addMethod(
+    booksRessource.addMethod(
       "DELETE",
       new LambdaIntegration(booksLambdaFn, { proxy: true })
+    );
+
+    const coversRessource = api.root.addResource("covers");
+
+    coversRessource.addMethod(
+      "POST",
+      new LambdaIntegration(bookCoversLambdaFn, { proxy: true })
     );
   }
 }
