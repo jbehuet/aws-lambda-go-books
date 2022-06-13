@@ -26,15 +26,7 @@ export class GoLambdaBooksStack extends Stack {
       })
     );
 
-    const bookCoversLambdaFn = new lambda.GoFunction(
-      this,
-      "go-lambda-book-covers-fn",
-      {
-        entry: path.join(__dirname, "../../go-lambda-app/cmd/covers"),
-      }
-    );
-
-    bookCoversLambdaFn.addToRolePolicy(
+    booksLambdaFn.addToRolePolicy(
       new aws_iam.PolicyStatement({
         effect: aws_iam.Effect.ALLOW,
         actions: ["s3:ListAllMyBuckets"],
@@ -42,7 +34,7 @@ export class GoLambdaBooksStack extends Stack {
       })
     );
 
-    bookCoversLambdaFn.addToRolePolicy(
+    booksLambdaFn.addToRolePolicy(
       new aws_iam.PolicyStatement({
         effect: aws_iam.Effect.ALLOW,
         actions: ["s3:ListBucket", "s3:GetBucketLocation"],
@@ -50,7 +42,7 @@ export class GoLambdaBooksStack extends Stack {
       })
     );
 
-    bookCoversLambdaFn.addToRolePolicy(
+    booksLambdaFn.addToRolePolicy(
       new aws_iam.PolicyStatement({
         effect: aws_iam.Effect.ALLOW,
         actions: [
@@ -93,7 +85,6 @@ export class GoLambdaBooksStack extends Stack {
     // add a /books resource
     const booksRessource = api.root.addResource("books");
 
-    // integrate GET /books with lambdaFn
     booksRessource.addMethod(
       "GET",
       new LambdaIntegration(booksLambdaFn, { proxy: true })
@@ -104,21 +95,28 @@ export class GoLambdaBooksStack extends Stack {
       new LambdaIntegration(booksLambdaFn, { proxy: true })
     );
 
-    booksRessource.addMethod(
+    // add a /books/{book} resource
+    const bookRessource = booksRessource.addResource("{uuid}");
+    bookRessource.addMethod(
+      "GET",
+      new LambdaIntegration(booksLambdaFn, { proxy: true })
+    );
+
+    bookRessource.addMethod(
       "PUT",
       new LambdaIntegration(booksLambdaFn, { proxy: true })
     );
 
-    booksRessource.addMethod(
+    bookRessource.addMethod(
       "DELETE",
       new LambdaIntegration(booksLambdaFn, { proxy: true })
     );
 
-    const coversRessource = api.root.addResource("covers");
-
-    coversRessource.addMethod(
+    // add a /books/{book}/cover resource
+    const coverRessource = bookRessource.addResource("cover");
+    coverRessource.addMethod(
       "POST",
-      new LambdaIntegration(bookCoversLambdaFn, { proxy: true })
+      new LambdaIntegration(booksLambdaFn, { proxy: true })
     );
   }
 }

@@ -1,15 +1,14 @@
-package covers
+package books
 
 import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io"
+	"jbehuet/aws-lambda-go-books/pkg/utils"
 	"mime"
 	"mime/multipart"
 	"net/http"
-	"path/filepath"
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -19,12 +18,6 @@ import (
 
 const bucketName = "jbehuet-book-covers"
 
-type File struct {
-	Content       string
-	FileName      string
-	FileExtension string
-}
-
 func StandardHeader(header map[string]string) http.Header {
 	h := http.Header{}
 	for k, v := range header {
@@ -33,61 +26,84 @@ func StandardHeader(header map[string]string) http.Header {
 	return h
 }
 
-func Upload(req events.APIGatewayProxyRequest, s3Client *s3.Client) (*File, error) {
+func Upload(req events.APIGatewayProxyRequest, s3Client *s3.Client) error {
 	// cf : https://github.com/grokify/go-awslambda/blob/master/multipart.go
 	headers := StandardHeader(req.Headers)
 	ct := headers.Get("content-type")
 	if len(ct) == 0 {
-		return nil, errors.New("content type missing")
+		return errors.New(utils.ContentTypeMissing)
 	}
 
 	mediatype, params, err := mime.ParseMediaType(ct)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if strings.Index(strings.ToLower(strings.TrimSpace(mediatype)), "multipart/") != 0 {
-		return nil, errors.New("content type missing multipart")
+		return errors.New(utils.ContentTypeMissingMultipart)
 	}
 
 	paramsInsensitiveKeys := StandardHeader(params)
 	boundary := paramsInsensitiveKeys.Get("boundary")
 	if len(boundary) == 0 {
-		return nil, errors.New("content type missing boundary")
+		return errors.New(utils.ContentTypeMissingBoundary)
 	}
 
 	multipartReader := multipart.NewReader(strings.NewReader(req.Body), boundary)
 
 	part, err := multipartReader.NextPart()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	content, err := io.ReadAll(part)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	// create a unique file name for the file
-	// tempFileName := uuid.NewString() + filepath.Ext(part.FileName())
+	// use uuid from query parameters
+	uuid := req.PathParameters["uuid"]
+	if uuid == "" {
+		return errors.New(utils.UUIDMissing)
+	}
 
 	_, err = s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket: aws.String(bucketName),
-		Key:    aws.String(part.FileName()),
+		Key:    aws.String(uuid),
 		Body:   bytes.NewReader(content),
 	})
 
-	fmt.Println(err)
+	if err != nil {
+		return errors.New(utils.ErrorCouldNotPutObject)
+	}
+
+	return nil
+
+}
+
+func GetPresignURL(uuid string, s3Client *s3.Client) (*string, error) {
+	s3PresignClient := s3.NewPresignClient(s3Client)
+
+	reponse, err := s3PresignClient.PresignGetObject(context.TODO(), &s3.GetObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(uuid),
+	})
 
 	if err != nil {
-		return nil, errors.New(err.Error())
+		return nil, errors.New(utils.ErrorCouldNotPresignGetObject)
 	}
 
-	file := File{
-		Content:       string(content),
-		FileName:      part.FileName(),
-		FileExtension: filepath.Ext(part.FileName()),
+	return &reponse.URL, err
+}
+
+func DeleteObject(uuid string, s3Client *s3.Client) error {
+	_, err := s3Client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(uuid),
+	})
+
+	if err != nil {
+		return errors.New(utils.ErrorCouldNotDeteleteObject)
 	}
 
-	return &file, nil
-
+	return nil
 }

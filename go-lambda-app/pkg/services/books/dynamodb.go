@@ -20,7 +20,7 @@ const tableName = "books"
 func FetchByUUID(uuid string, dynaClient *dynamodb.Client) (*Book, error) {
 	input := &dynamodb.GetItemInput{
 		Key: map[string]types.AttributeValue{
-			"uuid": &types.AttributeValueMemberS{Value: uuid},
+			"UUID": &types.AttributeValueMemberS{Value: uuid},
 		},
 		TableName: aws.String(tableName),
 	}
@@ -57,11 +57,10 @@ func Create(req events.APIGatewayProxyRequest, dynaClient *dynamodb.Client) (*Bo
 
 	// Create a book from request body
 	var b Book
-	b.UUID = uuid.NewString()
-
 	if err := json.Unmarshal([]byte(req.Body), &b); err != nil {
 		return nil, errors.New(utils.ErrorInvalidBookData)
 	}
+	b.UUID = uuid.NewString()
 
 	// Create dynamodb attributeValues
 	av, err := attributevalue.MarshalMap(b)
@@ -83,7 +82,10 @@ func Create(req events.APIGatewayProxyRequest, dynaClient *dynamodb.Client) (*Bo
 }
 
 func Update(req events.APIGatewayProxyRequest, dynaClient *dynamodb.Client) (*Book, error) {
-	uuid := req.QueryStringParameters["uuid"]
+	uuid := req.PathParameters["uuid"]
+	if uuid == "" {
+		return nil, errors.New(utils.UUIDMissing)
+	}
 
 	var b Book
 	if err := json.Unmarshal([]byte(req.Body), &b); err != nil {
@@ -98,7 +100,7 @@ func Update(req events.APIGatewayProxyRequest, dynaClient *dynamodb.Client) (*Bo
 
 	input := &dynamodb.UpdateItemInput{
 		Key: map[string]types.AttributeValue{
-			"uuid": &types.AttributeValueMemberS{Value: uuid},
+			"UUID": &types.AttributeValueMemberS{Value: uuid},
 		},
 		ExpressionAttributeValues: map[string]types.AttributeValue{
 			":title":  &types.AttributeValueMemberS{Value: b.Title},
@@ -107,22 +109,21 @@ func Update(req events.APIGatewayProxyRequest, dynaClient *dynamodb.Client) (*Bo
 		},
 		TableName:        aws.String(tableName),
 		ReturnValues:     types.ReturnValueUpdatedNew,
-		UpdateExpression: aws.String("set title = :title, author = :author, editor = :editor"),
+		UpdateExpression: aws.String("set Title = :title, Author = :author, Editor = :editor"),
 	}
 
 	_, err := dynaClient.UpdateItem(context.TODO(), input)
 	if err != nil {
-		return nil, errors.New(err.Error())
+		return nil, errors.New(utils.ErrorCouldNotUpdateItem)
 	}
 	return &b, nil
 }
 
-func Delete(req events.APIGatewayProxyRequest, dynaClient *dynamodb.Client) error {
-	uuid := req.QueryStringParameters["uuid"]
+func Delete(uuid string, dynaClient *dynamodb.Client) error {
 	input := &dynamodb.DeleteItemInput{
 		TableName: aws.String(tableName),
 		Key: map[string]types.AttributeValue{
-			"uuid": &types.AttributeValueMemberS{Value: uuid},
+			"UUID": &types.AttributeValueMemberS{Value: uuid},
 		},
 	}
 

@@ -9,23 +9,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
-func GetBookOrBooks(req events.APIGatewayProxyRequest, dynaClient *dynamodb.Client) (
+func GetBooks(dynaClient *dynamodb.Client) (
 	*events.APIGatewayProxyResponse,
 	error,
 ) {
-	uuid := req.QueryStringParameters["uuid"]
-	if uuid != "" {
-		// Get a book
-		result, err := FetchByUUID(uuid, dynaClient)
-		if err != nil {
-			return utils.ApiResponse(http.StatusNotFound, utils.ErrorBody{
-				ErrorMsg: aws.String(err.Error()),
-			})
-		}
-
-		return utils.ApiResponse(http.StatusOK, result)
-	}
-
 	// Get list of books
 	result, err := Fetch(dynaClient)
 	if err != nil {
