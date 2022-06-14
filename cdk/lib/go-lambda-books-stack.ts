@@ -1,8 +1,15 @@
 import * as lambda from "@aws-cdk/aws-lambda-go-alpha";
 import { Construct } from "constructs";
-import { aws_iam, CfnOutput, Stack, StackProps } from "aws-cdk-lib";
-
+import {
+  aws_iam,
+  aws_lambda_event_sources,
+  CfnOutput,
+  Stack,
+  StackProps,
+} from "aws-cdk-lib";
 import { LambdaIntegration, RestApi } from "aws-cdk-lib/aws-apigateway";
+import * as sqs from "aws-cdk-lib/aws-sqs";
+
 import * as path from "path";
 
 export class GoLambdaBooksStack extends Stack {
@@ -118,5 +125,22 @@ export class GoLambdaBooksStack extends Stack {
       "POST",
       new LambdaIntegration(booksLambdaFn, { proxy: true })
     );
+
+    // create Queue
+    const queue = new sqs.Queue(this, "book-covers-queue", {
+      queueName: "BookCoversQueue",
+    });
+
+    const thumbnailerLambdaFn = new lambda.GoFunction(
+      this,
+      "go-lambda-thumbnailer-fn",
+      {
+        entry: path.join(__dirname, "../../go-lambda-app/cmd/thumbnailer"),
+      }
+    );
+
+    const eventSource = new aws_lambda_event_sources.SqsEventSource(queue);
+
+    thumbnailerLambdaFn.addEventSource(eventSource);
   }
 }
