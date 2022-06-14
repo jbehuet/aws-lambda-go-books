@@ -7,9 +7,10 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 )
 
-func UploadCover(req events.APIGatewayProxyRequest, s3Client *s3.Client) (
+func UploadCover(req events.APIGatewayProxyRequest, s3Client *s3.Client, sqsClient *sqs.Client) (
 	*events.APIGatewayProxyResponse,
 	error,
 ) {
@@ -21,7 +22,15 @@ func UploadCover(req events.APIGatewayProxyRequest, s3Client *s3.Client) (
 		})
 	}
 
-	return utils.ApiResponse(http.StatusCreated, nil)
+	// Send message to queue
+	messageId, err := SendMessage(req, sqsClient)
+	if err != nil {
+		return utils.ApiResponse(http.StatusBadRequest, utils.ErrorBody{
+			ErrorMsg: aws.String(err.Error()),
+		})
+	}
+
+	return utils.ApiResponse(http.StatusCreated, messageId)
 }
 
 func UnhandledMethod() (*events.APIGatewayProxyResponse, error) {

@@ -12,11 +12,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 )
 
 var (
 	dynaClient *dynamodb.Client
 	s3Client   *s3.Client
+	sqsClient  *sqs.Client
 )
 
 func main() {
@@ -28,8 +30,11 @@ func main() {
 	if err != nil {
 		return
 	}
+
 	dynaClient = dynamodb.NewFromConfig(cfg)
 	s3Client = s3.NewFromConfig(cfg)
+	sqsClient = sqs.NewFromConfig(cfg)
+
 	lambda.Start(handler)
 }
 
@@ -44,7 +49,7 @@ func handler(req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse
 	case "POST":
 		isCoverPath, _ := regexp.Match(`.*\/cover`, []byte(req.Path))
 		if isCoverPath {
-			return books.UploadCover(req, s3Client)
+			return books.UploadCover(req, s3Client, sqsClient)
 		}
 		return books.CreateBook(req, dynaClient)
 	case "PUT":

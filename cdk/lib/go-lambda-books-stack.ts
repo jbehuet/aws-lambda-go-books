@@ -66,6 +66,19 @@ export class GoLambdaBooksStack extends Stack {
       })
     );
 
+    booksLambdaFn.addToRolePolicy(
+      new aws_iam.PolicyStatement({
+        actions: [
+          "sqs:GetQueueUrl",
+          "sqs:SendMessage",
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes",
+        ],
+        resources: ["arn:aws:sqs:eu-west-3:463496343972:book-covers-queue"],
+      })
+    );
+
     const api = new RestApi(this, "books-api", {
       description: "API for books",
       deployOptions: {
@@ -128,7 +141,7 @@ export class GoLambdaBooksStack extends Stack {
 
     // create Queue
     const queue = new sqs.Queue(this, "book-covers-queue", {
-      queueName: "BookCoversQueue",
+      queueName: "book-covers-queue",
     });
 
     const thumbnailerLambdaFn = new lambda.GoFunction(
